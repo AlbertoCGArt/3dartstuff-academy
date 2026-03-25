@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}{{ course.title }} - 3DArtStuff Academy{% endblock %}
+{% block content %}
+<div class="course-detail-hero">
+  <div class="course-detail-info">
+    <p class="section-tag">{{ 'Free Course' if course.is_free else 'Premium Course' }}</p>
+    <h1 class="course-detail-title">{{ course.title }}</h1>
+    <p class="course-detail-desc">{{ course.short_description }}</p>
+    <div class="course-detail-meta">
+      <span>{{ course.lesson_count }} lessons</span>
+      <span>{{ course.enrollment_count }} students enrolled</span>
+    </div>
+    {% if enrolled %}
+      <a href="{{ url_for('courses.lesson', course_slug=course.slug, lesson_slug=course.lessons[0].slug) }}" class="btn-primary">Continue Learning</a>
+    {% elif course.is_free %}
+      <form method="POST" action="{{ url_for('courses.enroll', slug=course.slug) }}">
+        <button type="submit" class="btn-primary">Enroll Free</button>
+      </form>
+    {% else %}
+      <form method="POST" action="{{ url_for('courses.enroll', slug=course.slug) }}">
+        <button type="submit" class="btn-primary">Enroll - ${{ "%.0f"|format(course.price) }}</button>
+      </form>
+    {% endif %}
+  </div>
+  {% if course.thumbnail %}
+  <div class="course-detail-thumb"><img src="{{ course.thumbnail }}" alt="{{ course.title }}"></div>
+  {% endif %}
+</div>
+<div class="course-detail-body">
+  <div class="course-description">
+    <h2>About This Course</h2>
+    <div class="content-body">{{ course.description|safe }}</div>
+  </div>
+  <div class="course-curriculum">
+    <h2>Curriculum - {{ course.lesson_count }} Lessons</h2>
+    <div class="lesson-list">
+      {% for lesson in course.lessons %}
+      <div class="lesson-row {% if lesson.is_free_preview %}preview{% endif %}">
+        <div class="lesson-row-left">
+          <span class="lesson-num">{{ loop.index }}</span>
+          <span class="lesson-title">{{ lesson.title }}</span>
+          {% if lesson.is_free_preview %}<span class="preview-badge">Free Preview</span>{% endif %}
+        </div>
+        <div class="lesson-row-right">
+          {% if lesson.duration %}<span class="lesson-duration">{{ lesson.duration }}</span>{% endif %}
+          {% if enrolled or lesson.is_free_preview %}
+            <a href="{{ url_for('courses.lesson', course_slug=course.slug, lesson_slug=lesson.slug) }}" class="lesson-link">Watch</a>
+          {% else %}
+            <span class="lesson-lock">locked</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

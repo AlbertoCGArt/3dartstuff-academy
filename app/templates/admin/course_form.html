@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Edit' if course else 'New' }} Course - Admin{% endblock %}
+{% block content %}
+<div class="admin-page">
+  <div class="admin-header">
+    <h1>{{ 'Edit Course' if course else 'New Course' }}</h1>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn-ghost">Back</a>
+  </div>
+  <form method="POST" class="admin-form">
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" name="title" required value="{{ course.title if course else '' }}">
+    </div>
+    <div class="form-group">
+      <label>Short Description</label>
+      <input type="text" name="short_description" value="{{ course.short_description if course else '' }}">
+    </div>
+    <div class="form-group">
+      <label>Full Description (HTML ok)</label>
+      <textarea name="description" rows="8">{{ course.description if course else '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Thumbnail URL</label>
+      <input type="text" name="thumbnail" value="{{ course.thumbnail if course else '' }}">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Price ($)</label>
+        <input type="number" name="price" step="0.01" value="{{ course.price if course else '0' }}">
+      </div>
+      <div class="form-group">
+        <label>Stripe Price ID</label>
+        <input type="text" name="stripe_price_id" value="{{ course.stripe_price_id if course else '' }}">
+      </div>
+    </div>
+    <div class="form-checks">
+      <label class="check-label"><input type="checkbox" name="is_free" {% if course and course.is_free %}checked{% endif %}> Free Course</label>
+      <label class="check-label"><input type="checkbox" name="is_published" {% if course and course.is_published %}checked{% endif %}> Published</label>
+    </div>
+    <button type="submit" class="btn-primary">{{ 'Update' if course else 'Create' }} Course</button>
+  </form>
+  {% if course %}
+  <div class="admin-lessons">
+    <div class="admin-subheader">
+      <h2>Lessons</h2>
+      <a href="{{ url_for('admin.new_lesson', course_id=course.id) }}" class="btn-primary">+ Add Lesson</a>
+    </div>
+    {% if course.lessons %}
+    <table class="admin-table">
+      <thead><tr><th>Order</th><th>Title</th><th>Duration</th><th>Free Preview</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for lesson in course.lessons %}
+        <tr>
+          <td>{{ lesson.order }}</td>
+          <td>{{ lesson.title }}</td>
+          <td>{{ lesson.duration or '-' }}</td>
+          <td>{{ 'Yes' if lesson.is_free_preview else 'No' }}</td>
+          <td><a href="{{ url_for('admin.edit_lesson', course_id=course.id, lesson_id=lesson.id) }}">Edit</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}My Learning - 3DArtStuff Academy{% endblock %}
+{% block content %}
+<div class="page-hero">
+  <p class="section-tag">My Learning</p>
+  <h1 class="page-hero-title">Hey, <span>{{ current_user.username }}</span></h1>
+</div>
+<section class="courses-section">
+  {% if courses %}
+  <div class="course-grid">
+    {% for course in courses %}
+    <a href="{{ url_for('courses.course_detail', slug=course.slug) }}" class="course-card">
+      <div class="course-thumb">
+        {% if course.thumbnail %}<img src="{{ course.thumbnail }}" alt="{{ course.title }}">
+        {% else %}<div class="thumb-placeholder">{{ course.title[0] }}</div>{% endif %}
+      </div>
+      <div class="course-info">
+        <h3 class="course-title">{{ course.title }}</h3>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" style="width: {{ current_user.course_progress(course.id) }}%"></div>
+        </div>
+        <span class="progress-label">{{ current_user.course_progress(course.id) }}% complete</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>No courses enrolled yet.</p>
+    <a href="{{ url_for('courses.list_courses') }}" class="btn-primary">Browse Courses</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

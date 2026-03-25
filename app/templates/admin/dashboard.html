@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Admin - 3DArtStuff Academy{% endblock %}
+{% block content %}
+<div class="admin-page">
+  <div class="admin-header">
+    <h1>Admin Dashboard</h1>
+    <a href="{{ url_for('admin.new_course') }}" class="btn-primary">+ New Course</a>
+  </div>
+  <div class="admin-stats">
+    <div class="stat-card"><div class="stat-num">{{ user_count }}</div><div class="stat-label">Students</div></div>
+    <div class="stat-card"><div class="stat-num">{{ enrollment_count }}</div><div class="stat-label">Enrollments</div></div>
+    <div class="stat-card"><div class="stat-num">{{ courses|length }}</div><div class="stat-label">Courses</div></div>
+  </div>
+  <div class="admin-courses">
+    <h2>Courses</h2>
+    <table class="admin-table">
+      <thead><tr><th>Title</th><th>Type</th><th>Lessons</th><th>Students</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for course in courses %}
+        <tr>
+          <td>{{ course.title }}</td>
+          <td>{% if course.is_free %}Free{% else %}${{ "%.0f"|format(course.price) }}{% endif %}</td>
+          <td>{{ course.lesson_count }}</td>
+          <td>{{ course.enrollment_count }}</td>
+          <td><span class="status {% if course.is_published %}published{% else %}draft{% endif %}">{% if course.is_published %}Published{% else %}Draft{% endif %}</span></td>
+          <td>
+            <a href="{{ url_for('admin.edit_course', course_id=course.id) }}">Edit</a>
+            <a href="{{ url_for('admin.new_lesson', course_id=course.id) }}">+ Lesson</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

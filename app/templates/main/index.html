@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}3DArtStuff Academy - Learn Hard Surface 3D Art{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-scan"></div>
+  <p class="hero-label">Hard Surface 3D Art Education</p>
+  <h1 class="hero-title"><span class="dim">3D</span><br><span class="accent">ART</span><br>ACADEMY</h1>
+  <div class="hero-bottom">
+    <p class="hero-desc">Master hard surface modeling in Blender and Plasticity. Real-time lessons, no fluff, taught by a working 3D artist at Sony.</p>
+    <div class="hero-actions">
+      <a href="{{ url_for('courses.list_courses') }}" class="btn-primary">Browse Courses</a>
+      {% if not current_user.is_authenticated %}
+        <a href="{{ url_for('auth.signup') }}" class="btn-ghost">Sign Up Free</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% if free_courses %}
+<section class="courses-section">
+  <div class="section-header">
+    <p class="section-tag">Free Courses</p>
+    <h2 class="section-heading">Start Learning Today</h2>
+  </div>
+  <div class="course-grid">
+    {% for course in free_courses %}
+    <a href="{{ url_for('courses.course_detail', slug=course.slug) }}" class="course-card">
+      <div class="course-thumb">
+        {% if course.thumbnail %}<img src="{{ course.thumbnail }}" alt="{{ course.title }}">
+        {% else %}<div class="thumb-placeholder">{{ course.title[0] }}</div>{% endif %}
+      </div>
+      <div class="course-info">
+        <span class="course-badge free">Free</span>
+        <h3 class="course-title">{{ course.title }}</h3>
+        <p class="course-desc">{{ course.short_description }}</p>
+        <div class="course-meta">
+          <span>{{ course.lesson_count }} lessons</span>
+          <span>{{ course.enrollment_count }} students</span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% if paid_courses %}
+<section class="courses-section dark">
+  <div class="section-header">
+    <p class="section-tag">Premium Courses</p>
+    <h2 class="section-heading">Go Deeper</h2>
+  </div>
+  <div class="course-grid">
+    {% for course in paid_courses %}
+    <a href="{{ url_for('courses.course_detail', slug=course.slug) }}" class="course-card">
+      <div class="course-thumb">
+        {% if course.thumbnail %}<img src="{{ course.thumbnail }}" alt="{{ course.title }}">
+        {% else %}<div class="thumb-placeholder">{{ course.title[0] }}</div>{% endif %}
+      </div>
+      <div class="course-info">
+        <span class="course-badge paid">${{ "%.0f"|format(course.price) }}</span>
+        <h3 class="course-title">{{ course.title }}</h3>
+        <p class="course-desc">{{ course.short_description }}</p>
+        <div class="course-meta">
+          <span>{{ course.lesson_count }} lessons</span>
+          <span>{{ course.enrollment_count }} students</span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+<section class="cta-section">
+  <h2 class="cta-heading">Built by a working artist.<br><span>Taught like one.</span></h2>
+  <p class="cta-sub">No timelapses. No magic cuts. Real workflows from someone who ships 3D art professionally at Sony.</p>
+  {% if not current_user.is_authenticated %}
+    <a href="{{ url_for('auth.signup') }}" class="btn-primary">Create Free Account</a>
+  {% else %}
+    <a href="{{ url_for('courses.list_courses') }}" class="btn-primary">Browse All Courses</a>
+  {% endif %}
+</section>
+{% endblock %}
