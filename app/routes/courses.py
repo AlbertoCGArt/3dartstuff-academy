@@ -106,3 +106,31 @@ def enroll_success(slug):
     if first_lesson:
         return redirect(url_for('courses.lesson', course_slug=slug, lesson_slug=first_lesson.slug))
     return redirect(url_for('courses.course_detail', slug=slug))
+
+@courses.route('/webhook', methods=['POST'])
+def webhook():
+    import stripe
+    from flask import current_app, request
+    payload = request.get_data()
+    sig_header = request.headers.get('Stripe-Signature')
+    webhook_secret = current_app.config['STRIPE_WEBHOOK_SECRET']
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except Exception as e:
+        return str(e), 400
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        course_id = int(session['metadata']['course_id'])
+        user_id = int(session['metadata']['user_id'])
+        from app.models import Enrollment
+        from app import db
+        existing = Enrollment.query.filter_by(user_id=user_id, course_id=course_id).first()
+        if not existing:
+            enrollment = Enrollment(
+                user_id=user_id,
+                course_id=course_id,
+                stripe_payment_id=session['id']
+            )
+            db.session.add(enrollment)
+            db.session.commit()
+    return '', 200
