@@ -19,6 +19,7 @@
         <li><a href="{{ url_for('auth.dashboard') }}">My Learning</a></li>
         {% if current_user.is_admin %}
           <li><a href="{{ url_for('admin.dashboard') }}" class="admin-link">Admin</a></li>
+          <li><a href="{{ url_for('admin.media') }}" class="admin-link">Media</a></li>
         {% endif %}
       {% endif %}
     </ul>

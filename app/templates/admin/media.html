@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Media Library - Admin{% endblock %}
+{% block content %}
+<div class="admin-page">
+  <div class="admin-header">
+    <h1>Media Library</h1>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn-ghost">Back to Admin</a>
+  </div>
+
+  <!-- Image Upload -->
+  <div class="media-section">
+    <h2>Upload Image</h2>
+    <div class="upload-box">
+      <input type="file" id="image-file" accept="image/*">
+      <button type="button" id="upload-image-btn" class="btn-primary">Upload Image</button>
+      <span id="image-status" class="upload-status"></span>
+    </div>
+    <div id="image-result" class="url-result" style="display:none">
+      <label>Image URL (click to copy):</label>
+      <input type="text" id="image-url" readonly onclick="this.select();document.execCommand('copy');showCopied(this)">
+    </div>
+  </div>
+
+  <!-- Video Upload -->
+  <div class="media-section">
+    <h2>Upload Video</h2>
+    <p class="media-note">// For files over 200MB, upload directly via bunny.net dashboard for reliability</p>
+    <div class="upload-box">
+      <input type="file" id="video-file" accept="video/*">
+      <input type="text" id="video-title" placeholder="Video title (optional)">
+      <button type="button" id="upload-video-btn" class="btn-primary">Upload Video</button>
+      <span id="video-status" class="upload-status"></span>
+    </div>
+    <div id="video-result" class="url-result" style="display:none">
+      <label>Embed URL (click to copy):</label>
+      <input type="text" id="video-url" readonly onclick="this.select();document.execCommand('copy');showCopied(this)">
+    </div>
+  </div>
+
+  <!-- Video Library -->
+  <div class="media-section">
+    <h2>Video Library</h2>
+    {% if videos %}
+    <div class="media-grid">
+      {% for video in videos %}
+      <div class="media-card" id="video-{{ video.guid }}">
+        <div class="media-thumb">
+          {% if video.thumbnail %}
+          <img src="{{ video.thumbnail }}" alt="{{ video.title }}" onerror="this.style.display='none'">
+          {% else %}
+          <div class="thumb-placeholder">{{ video.title[0] if video.title else 'V' }}</div>
+          {% endif %}
+          <div class="media-overlay">
+            <span class="media-duration">{{ '%d:%02d'|format(video.length // 60, video.length % 60) if video.length else '?' }}</span>
+          </div>
+        </div>
+        <div class="media-info">
+          <div class="media-name">{{ video.title }}</div>
+          <div class="media-status {% if video.status == 4 %}ready{% else %}processing{% endif %}">
+            {{ 'Ready' if video.status == 4 else 'Processing...' }}
+          </div>
+          <div class="media-actions">
+            <button class="btn-ghost-sm copy-embed"
+              data-url="https://iframe.mediadelivery.net/embed/{{ library_id }}/{{ video.guid }}">
+              Copy Embed
+            </button>
+            <button class="btn-ghost-sm copy-direct"
+              data-url="https://player.mediadelivery.net/play/{{ library_id }}/{{ video.guid }}">
+              Copy URL
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>No videos uploaded yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function showCopied(el) {
+  const orig = el.style.borderColor;
+  el.style.borderColor = '#4caf50';
+  setTimeout(() => el.style.borderColor = orig, 1000);
+}
+
+// Copy embed/url buttons
+document.querySelectorAll('.copy-embed, .copy-direct').forEach(btn => {
+  btn.addEventListener('click', function() {
+    navigator.clipboard.writeText(this.dataset.url);
+    const orig = this.textContent;
+    this.textContent = 'Copied!';
+    this.style.color = '#4caf50';
+    setTimeout(() => { this.textContent = orig; this.style.color = ''; }, 1500);
+  });
+});
+
+// Image upload
+document.getElementById('upload-image-btn').addEventListener('click', function() {
+  const file = document.getElementById('image-file').files[0];
+  if (!file) { alert('Select an image first'); return; }
+  const status = document.getElementById('image-status');
+  const btn = this;
+  btn.textContent = 'Uploading...'; btn.disabled = true;
+  status.textContent = 'Uploading...';
+  const formData = new FormData();
+  formData.append('image', file);
+  fetch('/admin/upload-image', { method: 'POST', body: formData })
+  .then(r => r.json()).then(data => {
+    if (data.success) {
+      document.getElementById('image-url').value = data.url;
+      document.getElementById('image-result').style.display = 'block';
+      status.textContent = 'Uploaded!';
+      status.style.color = '#4caf50';
+    } else {
+      status.textContent = 'Failed: ' + (data.error || 'Unknown');
+      status.style.color = '#ff5c3a';
+    }
+    btn.textContent = 'Upload Image'; btn.disabled = false;
+  });
+});
+
+// Video upload
+document.getElementById('upload-video-btn').addEventListener('click', function() {
+  const file = document.getElementById('video-file').files[0];
+  if (!file) { alert('Select a video first'); return; }
+  const status = document.getElementById('video-status');
+  const btn = this;
+  const title = document.getElementById('video-title').value || file.name;
+  btn.textContent = 'Uploading...'; btn.disabled = true;
+  status.textContent = 'Uploading to Bunny.net...';
+  const formData = new FormData();
+  formData.append('video', file);
+  formData.append('title', title);
+  fetch('/admin/upload-video', { method: 'POST', body: formData })
+  .then(r => r.json()).then(data => {
+    if (data.success) {
+      document.getElementById('video-url').value = data.embed_url;
+      document.getElementById('video-result').style.display = 'block';
+      status.textContent = 'Uploaded! Refresh page to see in library.';
+      status.style.color = '#4caf50';
+    } else {
+      status.textContent = 'Failed: ' + (data.error || 'Unknown');
+      status.style.color = '#ff5c3a';
+    }
+    btn.textContent = 'Upload Video'; btn.disabled = false;
+  });
+});
+</script>
+{% endblock %}

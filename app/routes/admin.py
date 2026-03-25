@@ -147,3 +147,60 @@ def upload_video():
     # Return embed URL
     embed_url = f'https://iframe.mediadelivery.net/embed/{library_id}/{video_id}'
     return jsonify({'success': True, 'video_id': video_id, 'embed_url': embed_url})
+
+@admin.route('/media')
+@login_required
+@admin_required
+def media():
+    import requests, os
+    library_id = os.getenv('BUNNY_LIBRARY_ID')
+    api_key = os.getenv('BUNNY_API_KEY')
+    storage_api_key = os.getenv('BUNNY_STORAGE_API_KEY', api_key)
+    storage_zone = os.getenv('BUNNY_STORAGE_ZONE', '3dartstuff-academy')
+
+    # Get videos from Bunny Stream
+    videos = []
+    try:
+        r = requests.get(
+            f'https://video.bunnycdn.com/library/{library_id}/videos?page=1&itemsPerPage=50',
+            headers={'AccessKey': api_key}
+        )
+        if r.status_code == 200:
+            videos = r.json().get('items', [])
+    except:
+        pass
+
+    return render_template('admin/media.html', videos=videos, library_id=library_id)
+
+@admin.route('/upload-image', methods=['POST'])
+@login_required
+@admin_required
+def upload_image():
+    import requests, os, uuid
+    image = request.files.get('image')
+    if not image:
+        return jsonify({'error': 'No image file'}), 400
+    storage_api_key = os.getenv('BUNNY_API_KEY')
+    storage_zone = os.getenv('BUNNY_STORAGE_ZONE', '3dartstuff-academy')
+    ext = image.filename.rsplit('.', 1)[-1].lower()
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    url = f'https://storage.bunnycdn.com/{storage_zone}/images/{filename}'
+    headers = {'AccessKey': storage_api_key, 'Content-Type': 'application/octet-stream'}
+    r = requests.put(url, headers=headers, data=image.read())
+    if r.status_code in [200, 201]:
+        cdn_url = f'https://{storage_zone}.b-cdn.net/images/{filename}'
+        return jsonify({'success': True, 'url': cdn_url, 'filename': filename})
+    return jsonify({'error': f'Upload failed: {r.status_code}'}), 500
+
+@admin.route('/delete-video/<video_id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_video(video_id):
+    import requests, os
+    library_id = os.getenv('BUNNY_LIBRARY_ID')
+    api_key = os.getenv('BUNNY_API_KEY')
+    r = requests.delete(
+        f'https://video.bunnycdn.com/library/{library_id}/videos/{video_id}',
+        headers={'AccessKey': api_key}
+    )
+    return jsonify({'success': r.status_code in [200, 204]})
