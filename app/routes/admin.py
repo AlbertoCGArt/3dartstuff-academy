@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app.models import Course, Lesson, User, Enrollment
 from app import db
 from functools import wraps
 import re
+import requests
 
 admin = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -117,3 +118,32 @@ def edit_lesson(course_id, lesson_id):
         db.session.commit()
         flash('Lesson updated!', 'success')
     return render_template('admin/lesson_form.html', course=course, lesson=lesson)
+
+@admin.route('/upload-video', methods=['POST'])
+@login_required
+@admin_required
+def upload_video():
+    import requests
+    import os
+    video = request.files.get('video')
+    if not video:
+        return jsonify({'error': 'No video file'}), 400
+    library_id = os.getenv('BUNNY_LIBRARY_ID')
+    api_key = os.getenv('BUNNY_API_KEY')
+    title = request.form.get('title', video.filename)
+    # Create video object
+    create_url = f'https://video.bunnycdn.com/library/{library_id}/videos'
+    headers = {'AccessKey': api_key, 'Content-Type': 'application/json'}
+    import json
+    r = requests.post(create_url, headers=headers, data=json.dumps({'title': title}))
+    video_data = r.json()
+    video_id = video_data.get('guid')
+    if not video_id:
+        return jsonify({'error': 'Failed to create video'}), 500
+    # Upload video
+    upload_url = f'https://video.bunnycdn.com/library/{library_id}/videos/{video_id}'
+    upload_headers = {'AccessKey': api_key, 'Content-Type': 'application/octet-stream'}
+    requests.put(upload_url, headers=upload_headers, data=video.read())
+    # Return embed URL
+    embed_url = f'https://iframe.mediadelivery.net/embed/{library_id}/{video_id}'
+    return jsonify({'success': True, 'video_id': video_id, 'embed_url': embed_url})

@@ -1,4 +1,72 @@
-{% extends 'base.html' %}
+import os
+
+# Add bunny upload route to admin.py
+bunny_route = '''
+@admin.route('/upload-video', methods=['POST'])
+@login_required
+@admin_required
+def upload_video():
+    import requests
+    import os
+    video = request.files.get('video')
+    if not video:
+        return jsonify({'error': 'No video file'}), 400
+    library_id = os.getenv('BUNNY_LIBRARY_ID')
+    api_key = os.getenv('BUNNY_API_KEY')
+    title = request.form.get('title', video.filename)
+    # Create video object
+    create_url = f'https://video.bunnycdn.com/library/{library_id}/videos'
+    headers = {'AccessKey': api_key, 'Content-Type': 'application/json'}
+    import json
+    r = requests.post(create_url, headers=headers, data=json.dumps({'title': title}))
+    video_data = r.json()
+    video_id = video_data.get('guid')
+    if not video_id:
+        return jsonify({'error': 'Failed to create video'}), 500
+    # Upload video
+    upload_url = f'https://video.bunnycdn.com/library/{library_id}/videos/{video_id}'
+    upload_headers = {'AccessKey': api_key, 'Content-Type': 'application/octet-stream'}
+    requests.put(upload_url, headers=upload_headers, data=video.read())
+    # Return embed URL
+    embed_url = f'https://iframe.mediadelivery.net/embed/{library_id}/{video_id}'
+    return jsonify({'success': True, 'video_id': video_id, 'embed_url': embed_url})
+'''
+
+# Read admin.py and add import + route
+with open('app/routes/admin.py', 'r', encoding='utf-8') as f:
+    content = f.read()
+
+# Add jsonify import if not there
+if 'jsonify' not in content:
+    content = content.replace(
+        'from flask import Blueprint, render_template, redirect, url_for, flash, request',
+        'from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify'
+    )
+
+# Add requests import if not there
+if 'import requests' not in content:
+    content = content.replace(
+        'import re\n',
+        'import re\nimport requests\n'
+    )
+
+if 'upload-video' not in content:
+    content += bunny_route
+
+with open('app/routes/admin.py', 'w', encoding='utf-8') as f:
+    f.write(content)
+print("Admin upload route added!")
+
+# Add requests to requirements
+with open('requirements.txt', 'r', encoding='utf-8') as f:
+    reqs = f.read()
+if 'requests' not in reqs:
+    with open('requirements.txt', 'a', encoding='utf-8') as f:
+        f.write('requests\n')
+    print("Added requests to requirements.txt")
+
+# Update lesson form to include video upload
+lesson_form_update = """{% extends 'base.html' %}
 {% block title %}{{ 'Edit' if lesson else 'New' }} Lesson - Admin{% endblock %}
 {% block content %}
 <div class="admin-page">
@@ -75,4 +143,10 @@ document.getElementById('upload-btn').addEventListener('click', function() {
   });
 });
 </script>
-{% endblock %}
+{% endblock %}"""
+
+with open('app/templates/admin/lesson_form.html', 'w', encoding='utf-8') as f:
+    f.write(lesson_form_update)
+print("Lesson form updated with video upload!")
+
+print("\nDone! Now run: git add . && git commit -m 'Add Bunny.net video upload' && git push")
